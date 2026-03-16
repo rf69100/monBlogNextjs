@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+// URL de l'API qui fournit la liste des billets
 const API_URL = "https://www.ryanfonseca.fr/b2lp/api/billets";
 
+// Type représentant un billet retourné par l'API
 type Billet = {
   id: string | number;
   Titre?: string;
@@ -9,6 +11,7 @@ type Billet = {
   Date?: string;
 };
 
+// Récupère les billets depuis l'API sans cache (données toujours fraîches)
 async function fetchBillets(): Promise<Billet[]> {
   const res = await fetch(API_URL, { cache: "no-store" });
   if (!res.ok) throw new Error(`Erreur API (status ${res.status})`);
@@ -17,9 +20,12 @@ async function fetchBillets(): Promise<Billet[]> {
   return data as Billet[];
 }
 
+// Sous-composant affichant la carte d'un billet individuel
 function BilletCard({ billet, index }: { billet: Billet; index: number }) {
   const title = billet.Titre ?? `Billet ${index + 1}`;
   const id = String(billet.id ?? index + 1);
+
+  // Formate la date en français si elle est disponible
   const date = billet.Date
     ? new Date(billet.Date).toLocaleDateString("fr-FR", {
         year: "numeric",
@@ -45,6 +51,8 @@ function BilletCard({ billet, index }: { billet: Billet; index: number }) {
   );
 }
 
+// Composant principal : fetche les billets et affiche la liste
+// Composant serveur asynchrone (Next.js App Router)
 export default async function BilletsList() {
   let billets: Billet[] = [];
   let errorMessage: string | null = null;
@@ -52,6 +60,7 @@ export default async function BilletsList() {
   try {
     billets = await fetchBillets();
   } catch (error) {
+    // En cas d'échec, on affiche un message d'erreur à l'utilisateur
     errorMessage = (error as Error).message;
   }
 
@@ -64,6 +73,7 @@ export default async function BilletsList() {
         </p>
       </header>
 
+      {/* Affichage conditionnel : erreur / liste vide / liste des billets */}
       {errorMessage ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
           <p className="font-medium">Impossible de charger les billets</p>
