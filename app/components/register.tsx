@@ -33,10 +33,10 @@ export default function Register() {
         {/* Logo */}
         <div className="mb-8 text-center">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600 text-white font-bold text-lg shadow-lg mb-4">
-            B2
+            B2LP
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Créer un compte</h1>
-          <p className="mt-1 text-sm text-slate-500">Rejoignez la communauté SIO2</p>
+          <p className="mt-1 text-sm text-slate-500">Rejoignez la communauté</p>
         </div>
 
         <form

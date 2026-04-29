@@ -52,13 +52,13 @@ export default async function AllPosts() {
       <div className="mb-12">
         <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700 mb-4">
           <span className="h-1.5 w-1.5 rounded-full bg-violet-500"></span>
-          Blog SIO2 · Lyon Palme
+          MonBlog
         </div>
         <h1 className="text-4xl font-bold text-slate-900 leading-tight">
           Derniers billets
         </h1>
         <p className="mt-3 text-slate-500 text-lg">
-          Retrouvez ici les articles publiés par les élèves de la section SIO2.
+          Retrouvez ici des articles publiés
         </p>
       </div>
 

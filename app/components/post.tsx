@@ -9,8 +9,8 @@ import { isLoggedIn } from "../lib/auth";
 import type { BilletDetail, Commentaire, CurrentUser } from "../types";
 
 function CommentaireItem({ commentaire }: { commentaire: Commentaire }) {
-  const auteur = commentaire.nom ?? commentaire.user?.nom ?? "Anonyme";
-  const date = commentaire.date ? formatDate(commentaire.date) : null;
+  const auteur = commentaire.Auteur ?? "Anonyme";
+  const date = commentaire.Date ? formatDate(commentaire.Date) : null;
   const initials = auteur.slice(0, 2).toUpperCase();
 
   return (
@@ -23,7 +23,7 @@ function CommentaireItem({ commentaire }: { commentaire: Commentaire }) {
           <span className="text-sm font-semibold text-slate-800">{auteur}</span>
           {date && <time className="text-xs text-slate-400">{date}</time>}
         </div>
-        <p className="text-sm text-slate-600 leading-relaxed">{commentaire.contenu}</p>
+        <p className="text-sm text-slate-600 leading-relaxed">{commentaire.Contenu}</p>
       </div>
     </li>
   );
@@ -97,7 +97,7 @@ export default function Post() {
   }
 
   const date = billet?.Date ? formatDate(billet.Date) : null;
-  const commentaires: Commentaire[] = billet?.commentaires ?? [];
+  const commentaires: Commentaire[] = billet?.Commentaires ?? [];
 
   return (
     <div>

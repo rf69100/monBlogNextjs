@@ -6,13 +6,10 @@ export type Billet = {
 };
 
 export type Commentaire = {
-  id: string | number;
-  contenu?: string;
-  date?: string;
-  billet_id?: string | number;
-  user_id?: string | number;
-  user?: { nom?: string };
-  nom?: string;
+  id?: string | number;
+  Auteur?: string;
+  Contenu?: string;
+  Date?: string;
 };
 
 export type CurrentUser = {
@@ -23,5 +20,5 @@ export type CurrentUser = {
 
 // Réponse de GET /billets/{id} : billet avec ses commentaires imbriqués
 export type BilletDetail = Billet & {
-  commentaires?: Commentaire[];
+  Commentaires?: Commentaire[];
 };
