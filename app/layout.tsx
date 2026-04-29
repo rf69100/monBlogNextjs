@@ -13,8 +13,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Le blog de Lyon Palme",
-  description: "B2LP — le blog des SIO2 de Lyon Palme",
+  title: "MonBLog",
+  description: "B2LP — le blog",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

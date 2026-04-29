@@ -6,11 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import { BilletService } from "../services/BilletService";
 import { formatDate } from "../lib/utils";
 import { isLoggedIn } from "../lib/auth";
-import type { BilletDetail, Commentaire } from "../types";
+import type { BilletDetail, Commentaire, CurrentUser } from "../types";
 
-function CommentaireItem({ commentaire, index }: { commentaire: Commentaire; index: number }) {
+function CommentaireItem({ commentaire }: { commentaire: Commentaire }) {
+  const auteur = commentaire.Auteur ?? "Anonyme";
   const date = commentaire.Date ? formatDate(commentaire.Date) : null;
-  const initials = (commentaire.Auteur ?? "?").slice(0, 2).toUpperCase();
+  const initials = auteur.slice(0, 2).toUpperCase();
 
   return (
     <li className="flex gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
@@ -19,16 +20,10 @@ function CommentaireItem({ commentaire, index }: { commentaire: Commentaire; ind
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-3 mb-1">
-          <span className="text-sm font-semibold text-slate-800">
-            {commentaire.Auteur ?? "Anonyme"}
-          </span>
-          {date && (
-            <time className="text-xs text-slate-400">{date}</time>
-          )}
+          <span className="text-sm font-semibold text-slate-800">{auteur}</span>
+          {date && <time className="text-xs text-slate-400">{date}</time>}
         </div>
-        <p className="text-sm text-slate-600 leading-relaxed">
-          {commentaire.Contenu ?? `Commentaire ${index + 1}`}
-        </p>
+        <p className="text-sm text-slate-600 leading-relaxed">{commentaire.Contenu}</p>
       </div>
     </li>
   );
@@ -39,20 +34,55 @@ export default function Post() {
   const router = useRouter();
   const id = params.id as string;
 
-  const [billet, setBillet]      = useState<BilletDetail | null>(null);
-  const [errorMessage, setError] = useState<string | null>(null);
-  const [loading, setLoading]    = useState(true);
+  const [billet, setBillet]           = useState<BilletDetail | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [errorMessage, setError]      = useState<string | null>(null);
+  const [loading, setLoading]         = useState(true);
+
+  const [newComment, setNewComment]   = useState("");
+  const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push("/login");
       return;
     }
-    BilletService.fetchBilletDetail(id)
-      .then(setBillet)
+
+    Promise.all([
+      BilletService.fetchBilletDetail(id),
+      BilletService.fetchCurrentUser(),
+    ])
+      .then(([billetData, userData]) => {
+        setBillet(billetData);
+        setCurrentUser(userData);
+      })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id, router]);
+
+  const handleSubmitComment = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!newComment.trim() || !currentUser) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      await BilletService.postCommentaire({
+        contenu: newComment.trim(),
+        date: today,
+        billet_id: id,
+        user_id: currentUser.id,
+      });
+      setNewComment("");
+      const updated = await BilletService.fetchBilletDetail(id);
+      setBillet(updated);
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : "Erreur lors de l'envoi.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -67,7 +97,7 @@ export default function Post() {
   }
 
   const date = billet?.Date ? formatDate(billet.Date) : null;
-  const commentaires: Commentaire[] = billet?.commentaires ?? [];
+  const commentaires: Commentaire[] = billet?.Commentaires ?? [];
 
   return (
     <div>
@@ -85,7 +115,6 @@ export default function Post() {
         </div>
       ) : billet && (
         <article className="space-y-10">
-          {/* En-tête de l'article */}
           <header className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             {date && (
               <time className="mb-3 block text-xs font-semibold uppercase tracking-widest text-violet-500">
@@ -102,7 +131,6 @@ export default function Post() {
             )}
           </header>
 
-          {/* Section commentaires */}
           <section>
             <div className="flex items-center gap-3 mb-5">
               <h2 className="text-lg font-semibold text-slate-900">Commentaires</h2>
@@ -120,9 +148,32 @@ export default function Post() {
             ) : (
               <ul className="space-y-3">
                 {commentaires.map((c, i) => (
-                  <CommentaireItem key={String(c.id ?? i)} commentaire={c} index={i} />
+                  <CommentaireItem key={String(c.id ?? i)} commentaire={c} />
                 ))}
               </ul>
+            )}
+
+            {/* Formulaire d'ajout de commentaire */}
+            {currentUser && (
+              <form onSubmit={handleSubmitComment} className="mt-6 space-y-3">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Écrire un commentaire…"
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"
+                />
+                {submitError && (
+                  <p className="text-xs text-red-600">{submitError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={submitting || !newComment.trim()}
+                  className="rounded-xl bg-violet-600 px-5 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                >
+                  {submitting ? "Envoi…" : "Publier"}
+                </button>
+              </form>
             )}
           </section>
         </article>

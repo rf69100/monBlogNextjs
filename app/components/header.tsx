@@ -26,10 +26,10 @@ export default function Header() {
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2.5 group">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white text-xs font-bold shadow-sm group-hover:bg-violet-700 transition-colors">
-            B2
+            B2LP
           </span>
           <span className="text-lg font-semibold text-slate-900 group-hover:text-violet-700 transition-colors">
-            Blog de Lyon Palme
+            MonBlog
           </span>
         </Link>
 

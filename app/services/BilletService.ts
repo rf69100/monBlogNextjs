@@ -1,4 +1,4 @@
-import type { Billet, BilletDetail } from "../types";
+import type { Billet, BilletDetail, CurrentUser } from "../types";
 import { API_BASE_URL, ENDPOINTS, PROXY_ENDPOINTS } from "../lib/api-config";
 import { getAuthToken, TOKEN_KEY } from "../lib/auth";
 
@@ -61,6 +61,26 @@ export class BilletService {
       cache: "no-store",
     });
     return res.json();
+  }
+
+  /** GET /user — récupère l'utilisateur connecté (id, nom, email). */
+  static async fetchCurrentUser(): Promise<CurrentUser> {
+    const res = await this.request(ENDPOINTS.user, { auth: true, cache: "no-store" });
+    return res.json();
+  }
+
+  /** POST /commentaires — soumet un nouveau commentaire. */
+  static async postCommentaire(payload: {
+    contenu: string;
+    date: string;
+    billet_id: string | number;
+    user_id: number;
+  }): Promise<void> {
+    await this.request(ENDPOINTS.commentaires, {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(payload),
+    });
   }
 
   /**
