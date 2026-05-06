@@ -61,22 +61,26 @@ export default function Post() {
       .finally(() => setLoading(false));
   }, [id, router]);
 
+  const MAX_COMMENT_LENGTH = 200;
+
   const handleSubmitComment = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!newComment.trim() || !currentUser) return;
+    const trimmed = newComment.trim();
+    if (!trimmed || !currentUser) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const today = new Date().toISOString().split("T")[0];
-      await BilletService.postCommentaire({
-        contenu: newComment.trim(),
-        date: today,
-        billet_id: id,
+      const created = await BilletService.postCommentaire({
+        COM_CONTENU: trimmed,
+        billet_id: Number(id),
         user_id: currentUser.id,
       });
       setNewComment("");
-      const updated = await BilletService.fetchBilletDetail(id);
-      setBillet(updated);
+      setBillet((prev) =>
+        prev
+          ? { ...prev, Commentaires: [...(prev.Commentaires ?? []), created] }
+          : prev
+      );
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : "Erreur lors de l'envoi.");
     } finally {
@@ -156,19 +160,29 @@ export default function Post() {
             {/* Formulaire d'ajout de commentaire */}
             {currentUser && (
               <form onSubmit={handleSubmitComment} className="mt-6 space-y-3">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Écrire un commentaire…"
-                  rows={3}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"
-                />
+                <div className="relative">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value.slice(0, MAX_COMMENT_LENGTH))}
+                    placeholder="Écrire un commentaire…"
+                    rows={3}
+                    maxLength={MAX_COMMENT_LENGTH}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pb-7 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"
+                  />
+                  <span
+                    className={`absolute bottom-2 right-3 text-xs ${
+                      newComment.length >= MAX_COMMENT_LENGTH ? "text-red-500" : "text-slate-400"
+                    }`}
+                  >
+                    {newComment.length}/{MAX_COMMENT_LENGTH}
+                  </span>
+                </div>
                 {submitError && (
                   <p className="text-xs text-red-600">{submitError}</p>
                 )}
                 <button
                   type="submit"
-                  disabled={submitting || !newComment.trim()}
+                  disabled={submitting || !newComment.trim() || newComment.length > MAX_COMMENT_LENGTH}
                   className="rounded-xl bg-violet-600 px-5 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? "Envoi…" : "Publier"}

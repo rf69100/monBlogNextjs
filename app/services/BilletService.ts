@@ -30,7 +30,13 @@ export class BilletService {
       if (token) headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_BASE_URL}${path}`, {
+    // Browser requests go through the Next.js proxy to bypass CORS
+    // (the external API only whitelists the Vercel production domain).
+    // Server-side calls (Server Components) reach the API directly.
+    const isBrowser = typeof window !== "undefined";
+    const baseUrl = isBrowser ? "/api/proxy" : API_BASE_URL;
+
+    const res = await fetch(`${baseUrl}${path}`, {
       ...fetchOptions,
       headers,
     });
@@ -60,27 +66,30 @@ export class BilletService {
       auth: true,
       cache: "no-store",
     });
-    return res.json();
+    const json = await res.json();
+    return (json.data ?? json) as BilletDetail;
   }
 
   /** GET /user — récupère l'utilisateur connecté (id, nom, email). */
   static async fetchCurrentUser(): Promise<CurrentUser> {
     const res = await this.request(ENDPOINTS.user, { auth: true, cache: "no-store" });
-    return res.json();
+    const json = await res.json();
+    return (json.data ?? json) as CurrentUser;
   }
 
-  /** POST /commentaires — soumet un nouveau commentaire. */
+  /** POST /commentaires — soumet un nouveau commentaire. Retourne le commentaire créé. */
   static async postCommentaire(payload: {
-    contenu: string;
-    date: string;
-    billet_id: string | number;
+    COM_CONTENU: string;
+    billet_id: number;
     user_id: number;
-  }): Promise<void> {
-    await this.request(ENDPOINTS.commentaires, {
+  }): Promise<import("../types").Commentaire> {
+    const res = await this.request(ENDPOINTS.commentaires, {
       method: "POST",
       auth: true,
       body: JSON.stringify(payload),
     });
+    const json = await res.json();
+    return json.data as import("../types").Commentaire;
   }
 
   /**
@@ -109,14 +118,7 @@ export class BilletService {
     localStorage.removeItem(TOKEN_KEY);
   }
 
-  /**
-   * POST /register via le proxy Next.js.
-   * Même logique que login : le CSRF est géré côté serveur.
-   */
-  /**
-   * POST /register via le proxy Next.js.
-   * Champ attendu par l'API : email (et non mail malgré le README).
-   */
+  /** POST /register via le proxy Next.js. Même logique que login pour le CSRF. */
   static async register(name: string, email: string, password: string): Promise<void> {
     const res = await fetch(PROXY_ENDPOINTS.register, {
       method: "POST",

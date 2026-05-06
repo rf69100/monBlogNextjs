@@ -12,8 +12,9 @@ const securityHeaders = [
       "img-src 'self' data: blob:",
       // Geist is self-hosted via next/font at build time → no external font CDN needed.
       "font-src 'self'",
-      // Client components call the external API directly (fetchBilletDetail, postCommentaire…).
-      "connect-src 'self' https://www.ryanfonseca.fr",
+      // All client-side API calls go through the /api/proxy route (same origin).
+      // Server Components call the external API directly — no browser CORS restriction.
+      "connect-src 'self'",
       "frame-ancestors 'none'",
     ].join("; "),
   },
