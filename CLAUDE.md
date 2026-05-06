@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev      # start dev server (Next.js with Turbopack)
+npm run dev      # start dev server
 npm run build    # production build
 npm run start    # start production server
 npm run lint     # run ESLint
@@ -15,7 +15,7 @@ No test suite is configured.
 
 ## Architecture
 
-**Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · deployed on Vercel.
+**Stack:** Next.js 16.1.6 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · deployed on Vercel at `https://b2lp-ryan.vercel.app`.
 
 **Routes:**
 - `/` → `app/page.tsx` → renders `<AllPosts />` (async Server Component — fetches billet list server-side)
@@ -25,11 +25,17 @@ No test suite is configured.
 - `POST /api/auth/login` — Next.js proxy for Laravel Sanctum login (handles CSRF server-side)
 - `POST /api/auth/register` — Next.js proxy for Sanctum register (same pattern)
 
-**Auth flow:** Token-based (Bearer). After login, the token is stored in `localStorage` via `TOKEN_KEY` from `app/lib/auth.ts`. `BilletService.login()` calls the internal proxy route (not the external API directly) to avoid CORS and Sanctum CSRF restrictions. Client components call `isLoggedIn()` / `getAuthToken()` from `app/lib/auth.ts`.
+**Auth flow:** Token-based (Bearer). After login, the token is stored in `localStorage` via `TOKEN_KEY` from `app/lib/auth.ts`. `BilletService.login()` calls the internal proxy route (not the external API directly) to avoid CORS and Sanctum CSRF restrictions. Client components call `isLoggedIn()` / `getAuthToken()` from `app/lib/auth.ts`. The `<Header />` component watches `usePathname()` and re-checks `isLoggedIn()` on every route change to stay in sync.
+
+**Logout is client-only:** `BilletService.logout()` only removes the token from `localStorage` — it does not call the server. `ENDPOINTS.logout` (`/user/logout`) is defined in `api-config.ts` but intentionally unused.
 
 **Service layer:** `app/services/BilletService.ts` is the single point of contact with the backend. All fetch calls go through `BilletService.request()`, which attaches the Bearer token when `auth: true` is passed. The login/register methods call the internal Next.js proxy routes instead of the external API directly.
 
-**External API:** `https://www.ryanfonseca.fr/b2lp/api/` (Laravel backend). All endpoints are defined in `app/lib/api-config.ts`:
+**External API:** Two base URLs are defined in `app/lib/api-config.ts`:
+- `API_BASE_URL` = `https://www.ryanfonseca.fr/b2lp/api` — used for all API calls
+- `APP_BASE_URL` = `https://www.ryanfonseca.fr/b2lp` — used only to fetch the Sanctum CSRF cookie in the login proxy
+
+Endpoints:
 - `GET /billets` → list of billets (`Billet[]`)
 - `GET /billets/{id}` → billet + nested `Commentaires[]` (requires auth)
 - `POST /commentaires` → submit a comment (requires auth; payload: `contenu`, `date`, `billet_id`, `user_id`)
@@ -37,6 +43,8 @@ No test suite is configured.
 - `POST /login` / `POST /register` → called via the proxy routes, not directly from the browser
 
 **Types:** All shared types live in `app/types.ts`: `Billet`, `BilletDetail` (extends `Billet` with `Commentaires[]`), `Commentaire`, `CurrentUser`.
+
+**Utilities:** `app/lib/utils.ts` exports `formatDate(dateStr)` — formats an ISO date string to French locale (e.g. "12 avril 2025"). Used by `<Post />` and `<AllPosts />`.
 
 **Styling:** Tailwind CSS v4 imported via `@import "tailwindcss"` in `globals.css`. Color palette: violet (primary/accents), slate (text/borders), red (errors). Components use Tailwind utility classes directly — no CSS modules.
 
