@@ -31,6 +31,8 @@ No test suite is configured.
 
 **Service layer:** `app/services/BilletService.ts` is the single point of contact with the backend. All fetch calls go through `BilletService.request()`, which attaches the Bearer token when `auth: true` is passed. The login/register methods call the internal Next.js proxy routes instead of the external API directly.
 
+**Proxy routing (important):** `BilletService.request()` picks its base URL based on environment. In the browser (`typeof window !== "undefined"`) it routes through the catch-all proxy `/api/proxy` (`app/api/proxy/[...path]/route.ts`); in Server Components it calls `API_BASE_URL` directly. The proxy exists because the external API only whitelists the Vercel production domain, so direct browser calls (e.g. from localhost) would be blocked by CORS. The proxy forwards the `Authorization` and `Content-Type` headers and returns the upstream response verbatim.
+
 **External API:** Two base URLs are defined in `app/lib/api-config.ts`:
 - `API_BASE_URL` = `https://www.ryanfonseca.fr/b2lp/api` — used for all API calls
 - `APP_BASE_URL` = `https://www.ryanfonseca.fr/b2lp` — used only to fetch the Sanctum CSRF cookie in the login proxy
@@ -38,11 +40,13 @@ No test suite is configured.
 Endpoints:
 - `GET /billets` → list of billets (`Billet[]`)
 - `GET /billets/{id}` → billet + nested `Commentaires[]` (requires auth)
-- `POST /commentaires` → submit a comment (requires auth; payload: `contenu`, `date`, `billet_id`, `user_id`)
+- `POST /commentaires` → submit a comment (requires auth; payload: `COM_CONTENU`, `billet_id`, `user_id` — note the `COM_` prefix on the content field)
 - `GET /user` → current user info (requires auth)
 - `POST /login` / `POST /register` → called via the proxy routes, not directly from the browser
 
-**Types:** All shared types live in `app/types.ts`: `Billet`, `BilletDetail` (extends `Billet` with `Commentaires[]`), `Commentaire`, `CurrentUser`.
+**Types:** All shared types live in `app/types.ts`: `Billet`, `BilletDetail` (extends `Billet` with `Commentaires[]`), `Commentaire`, `CurrentUser`. The API returns capitalized French field names (`Titre`, `Contenu`, `Date`, `Auteur`) which are mostly optional in the types; `CurrentUser` is the exception (`id`, `nom`, `email`, all required).
+
+**Security headers:** `next.config.ts` sets a strict CSP plus `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff` on all routes, and `Cache-Control: no-store` on `/login` and `/register`. The CSP `connect-src 'self'` only works because all browser API calls go through the same-origin `/api/proxy` route — adding a direct external fetch from a Client Component would require widening the CSP. `script-src` keeps `unsafe-inline`/`unsafe-eval` because Next.js requires them.
 
 **Utilities:** `app/lib/utils.ts` exports `formatDate(dateStr)` — formats an ISO date string to French locale (e.g. "12 avril 2025"). Used by `<Post />` and `<AllPosts />`.
 

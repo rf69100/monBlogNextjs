@@ -75,10 +75,19 @@ export default function Post() {
         billet_id: Number(id),
         user_id: currentUser.id,
       });
+      // Le shape renvoyé par l'API peut différer des champs d'affichage
+      // (Auteur/Contenu/Date) — on complète avec ce que l'on connaît
+      // localement pour garantir un rendu correct sans recharger la page.
+      const optimistic: Commentaire = {
+        ...created,
+        Auteur: created.Auteur ?? currentUser.nom,
+        Contenu: created.Contenu ?? trimmed,
+        Date: created.Date ?? new Date().toISOString(),
+      };
       setNewComment("");
       setBillet((prev) =>
         prev
-          ? { ...prev, Commentaires: [...(prev.Commentaires ?? []), created] }
+          ? { ...prev, Commentaires: [...(prev.Commentaires ?? []), optimistic] }
           : prev
       );
     } catch (err: unknown) {

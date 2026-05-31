@@ -89,7 +89,7 @@ export class BilletService {
       body: JSON.stringify(payload),
     });
     const json = await res.json();
-    return json.data as import("../types").Commentaire;
+    return (json.data ?? json) as import("../types").Commentaire;
   }
 
   /**
