@@ -157,10 +157,11 @@ L'API retourne des champs avec des noms français capitalisés :
 
 ```typescript
 // Billet (GET /billets)
-{ id: number, Titre: string, Contenu: string, Date: string }
+{ id: number, Titre: string, Contenu: string, Date: string,
+  Categories: [{ Id: number, Libelle: string }] }   // tableau éventuellement vide
 
 // BilletDetail (GET /billets/{id})
-{ id, Titre, Contenu, Date, Commentaires: [{ id, Auteur, Contenu, Date }] }
+{ id, Titre, Contenu, Date, Categories: [...], Commentaires: [{ id, Auteur, Contenu, Date }] }
 
 // CurrentUser (GET /user)
 { id: number, nom: string, email: string }
@@ -245,6 +246,72 @@ sequenceDiagram
     PO->>PO: Mise à jour optimiste<br/>(affichage immédiat)
     PO->>U: Le commentaire apparaît dans la liste
 ```
+
+---
+
+## Fonctionnalité : catégories des billets
+
+> Ajoutée sur la branche `categorie`. Permet d'afficher les catégories de chaque billet et de filtrer la liste par catégorie.
+
+### Contexte côté API
+
+Le back-end associe désormais à chaque billet une liste de **catégories** (ex : `monopalme`, `bi-palmes`, `compétition`, `sécurité`, `randonnée palmée`). Un billet peut en avoir 0, 1 ou plusieurs.
+
+- `GET /billets` renvoie le champ `Categories` (tableau, éventuellement vide) pour chaque billet — **sans authentification**.
+- `GET /billets/{id}` renvoie également `Categories` (en plus de `Commentaires`).
+- ⚠️ **Il n'existe pas d'endpoint `/categories`** : la liste des catégories disponibles est **déduite côté front** à partir des billets reçus (déduplication par `Id`).
+
+### Choix d'implémentation : filtrage côté client
+
+Le filtrage est réalisé **côté client**, sur le tableau de billets déjà chargé, plutôt que via le paramètre serveur `?categorie_id=`. Raisons :
+
+- L'intégralité des billets, **catégories incluses**, arrive en un **seul appel** `GET /billets`.
+- Il n'y a pas d'endpoint `/categories` : la liste des filtres est de toute façon dérivée des billets en mémoire.
+- `AllPosts` est un **Server Component** ; un filtrage serveur imposerait un re-fetch à chaque clic et obligerait à transformer cet appel en requête navigateur (via le proxy). Le filtrage en mémoire est instantané et sans requête supplémentaire.
+
+### Architecture de la fonctionnalité
+
+Contrainte clé : `AllPosts` est asynchrone et s'exécute côté serveur (il fait le fetch), alors que le filtre a besoin d'un **état client** (`useState`). La solution : garder le fetch côté serveur et déléguer le rendu interactif à un Client Component qui reçoit les billets en props.
+
+```
+AllPosts (Server Component)         ← fetch GET /billets (serveur, inchangé)
+   │ billets (props)
+   ▼
+BilletsList (Client Component)      ← état du filtre + dérivation des catégories
+   ├── CategoryFilter               ← barre de chips ("Toutes" + catégories)
+   └── BilletCard ×N
+          └── CategoryChips         ← badges des catégories du billet
+```
+
+### Fichiers ajoutés / modifiés
+
+| Fichier | Type | Rôle |
+|---|---|---|
+| `app/types.ts` | modifié | Ajout du type `Categorie` (`Id`, `Libelle`) et du champ `Categories?` sur `Billet` (hérité par `BilletDetail`). |
+| `app/lib/utils.ts` | modifié | `extractCategories()` (déduplication par `Id` + tri alphabétique FR) et `filterBilletsByCategorie()` — **fonctions pures, testables**. |
+| `app/components/categoryChips.tsx` | créé | Badges présentationnels des catégories, réutilisés sur la carte et sur le détail. Ne rend rien si aucune catégorie. |
+| `app/components/categoryFilter.tsx` | créé | Barre horizontale scrollable de chips (`Toutes` + une chip par catégorie), avec `aria-pressed`. |
+| `app/components/billetsList.tsx` | créé | **Client Component** : gère l'état du filtre, dérive les catégories, affiche la liste filtrée. Contient `BilletCard`. |
+| `app/components/allPosts.tsx` | modifié | Reste un **Server Component** (fetch inchangé) ; délègue le rendu de la liste à `<BilletsList>`. |
+| `app/components/post.tsx` | modifié | Affiche les catégories du billet sur l'écran de détail. |
+
+### Gestion des états
+
+- **Liste globale vide** (aucun billet renvoyé par l'API) : gérée par `AllPosts` (« Aucun billet pour l'instant »).
+- **Filtre ne renvoyant aucun billet** : message dédié dans `BilletsList` (« Aucun billet dans cette catégorie », invite à revenir sur « Toutes »).
+- **Billet sans catégorie** : `CategoryChips` ne rend rien (pas de conteneur vide).
+- **Aucune catégorie sur l'ensemble des billets** : la barre de filtre n'est pas affichée.
+
+### Validation
+
+| Vérification | Résultat |
+|---|---|
+| `npm run lint` | ✅ aucun warning |
+| `npm run build` | ✅ TypeScript + frontière Server/Client OK |
+| Logique pure (`extractCategories` / `filterBilletsByCategorie`) | ✅ déduplication par `Id`, tri avec accents FR, option « Toutes », filtre par catégorie, catégorie inexistante → liste vide |
+| Rendu réel (`npm run dev`) | ✅ chips triées/dédupliquées, accents UTF-8 corrects, billet sans catégorie géré, détail intact |
+
+> ℹ️ L'endpoint `GET /billets` renvoie actuellement une liste vide en production ; le rendu visuel a donc été validé avec un jeu de données de test temporaire, retiré après vérification.
 
 ---
 
