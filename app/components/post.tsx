@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { BilletService } from "../services/BilletService";
 import { formatDate } from "../lib/utils";
 import { isLoggedIn } from "../lib/auth";
+import CategoryChips from "./categoryChips";
 import type { BilletDetail, Commentaire, CurrentUser } from "../types";
 
 function CommentaireItem({ commentaire }: { commentaire: Commentaire }) {
@@ -137,6 +138,8 @@ export default function Post() {
             <h1 className="text-3xl font-bold text-slate-900 leading-tight">
               {billet.Titre ?? "Billet sans titre"}
             </h1>
+            {/* Catégories du billet (ne rend rien s'il n'en a aucune) */}
+            <CategoryChips categories={billet.Categories} className="mt-3" />
             {billet.Contenu && (
               <p className="mt-6 text-slate-600 leading-relaxed text-base border-t border-slate-100 pt-6">
                 {billet.Contenu}

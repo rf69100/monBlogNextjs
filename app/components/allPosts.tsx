@@ -1,40 +1,6 @@
-import Link from "next/link";
 import { BilletService } from "../services/BilletService";
-import { formatDate } from "../lib/utils";
+import BilletsList from "./billetsList";
 import type { Billet } from "../types";
-
-function BilletCard({ billet, index }: { billet: Billet; index: number }) {
-  const title   = billet.Titre ?? `Billet ${index + 1}`;
-  const id      = String(billet.id ?? index + 1);
-  const date    = billet.Date ? formatDate(billet.Date) : null;
-  const excerpt = billet.Contenu ? billet.Contenu.slice(0, 160).trimEnd() + (billet.Contenu.length > 160 ? "…" : "") : null;
-
-  return (
-    <article className="group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-violet-200 hover:shadow-md">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          {date && (
-            <time className="mb-2 block text-xs font-medium uppercase tracking-wide text-violet-500">
-              {date}
-            </time>
-          )}
-          <h2 className="text-xl font-semibold text-slate-900 group-hover:text-violet-700 transition-colors leading-snug">
-            {title}
-          </h2>
-          {excerpt && (
-            <p className="mt-2 text-sm text-slate-500 leading-relaxed line-clamp-2">
-              {excerpt}
-            </p>
-          )}
-        </div>
-        <span className="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-violet-50 text-violet-400 group-hover:bg-violet-600 group-hover:text-white transition-all">
-          →
-        </span>
-      </div>
-      <Link href={`/billets/${id}`} className="absolute inset-0 rounded-2xl" aria-label={`Lire : ${title}`} />
-    </article>
-  );
-}
 
 export default async function AllPosts() {
   let billets: Billet[] = [];
@@ -73,13 +39,9 @@ export default async function AllPosts() {
           <p className="mt-1 text-sm">Revenez bientôt !</p>
         </div>
       ) : (
-        <ul className="space-y-4">
-          {billets.map((billet, index) => (
-            <li key={String(billet.id ?? index)}>
-              <BilletCard billet={billet} index={index} />
-            </li>
-          ))}
-        </ul>
+        // Rendu interactif (filtre + cartes) délégué à un Client Component :
+        // le fetch reste côté serveur, l'état du filtre vit côté client.
+        <BilletsList billets={billets} />
       )}
     </div>
   );
